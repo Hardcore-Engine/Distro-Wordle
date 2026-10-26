@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Distro Wordle</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14141f; }
+  canvas { display: block; touch-action: manipulation; }
+  #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+         padding: 24px; text-align: center; color: #ff8787; font: 16px system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="err"></div>
+
+<!-- Aynı dizindeki bağımlılıklar (gömülü DEĞİL): BrickScript önce, motor sonra -->
+<script src="brickscript-optimized.js"></script>
+<script src="hardcore5.js"></script>
+
+<!-- Oyun mantığı: BrickScript -->
+<script type="text/brickscript" id="distro-wordle-bs">
+// ---------- Durum ----------
+brick MAXTRIES = 6;
+brick tChars = chars(answer());
+brick N = len(tChars);
+brick guesses = [];
+brick results = [];
+brick kstat = [];
+brick cur = "";
+brick state = 0;      // 0 oynuyor, 1 kazandı, 2 kaybetti
+brick msg = "";
+brick msgT = 0;
+
+brick ki = 0;
+stack (ki < 26) { push(kstat, 0); ki = ki + 1; }
+
+// ---------- Mantık ----------
+blueprint flash(m) { msg = m; msgT = 2.2; }
+
+// 0 = yok (gri), 1 = yanlış yerde (sarı), 2 = doğru yer (yeşil)
+blueprint evaluate(g) {
+  brick gc = chars(g);
+  brick res = [];
+  brick used = [];
+  brick i = 0;
+  stack (i < N) { push(res, 0); push(used, false); i = i + 1; }
+  i = 0;
+  stack (i < N) {
+    if (gc[i] == tChars[i]) { res[i] = 2; used[i] = true; }
+    i = i + 1;
+  }
+  i = 0;
+  stack (i < N) {
+    if (res[i] == 0) {
+      brick j = 0;
+      stack (j < N) {
+        if (!used[j] && gc[i] == tChars[j]) { res[i] = 1; used[j] = true; j = N; }
+        j = j + 1;
+      }
+    }
+    i = i + 1;
+  }
+  return res;
+}
+
+blueprint markKeys(g, res) {
+  brick gc = chars(g);
+  brick i = 0;
+  stack (i < N) {
+    brick li = lidx(gc[i]);
+    brick s = res[i] + 1;
+    if (s > kstat[li]) { kstat[li] = s; }
+    i = i + 1;
+  }
+}
+
+blueprint accept(g) {
+  brick res = evaluate(g);
+  push(guesses, g);
+  push(results, res);
+  markKeys(g, res);
+  brick greens = 0;
+  brick i = 0;
+  stack (i < N) { if (res[i] == 2) { greens = greens + 1; } i = i + 1; }
+  if (greens == N) { state = 1; }
+  else if (len(guesses) >= MAXTRIES) { state = 2; }
+}
+
+blueprint submit() {
+  brick g = normGuess(cur);
+  if (len(g) != N) { flash("Harf sayısı " + N + " olmalı"); return; }
+  if (!isWord(g)) { flash("Listede böyle bir dağıtım yok"); return; }
+  accept(g);
+  saveGuesses(guesses);
+  cur = "";
+}
+
+blueprint press(k) {
+  if (state != 0) { return; }
+  if (k == "ENTER") { submit(); return; }
+  if (k == "DEL") { cur = drop(cur); return; }
+  if (len(cur) < 24) { cur = cur + k; }
+}
+
+// ---------- Çizim ----------
+blueprint scol(s) {
+  if (s == 2) { return "#2f9e44"; }
+  if (s == 1) { return "#d9a400"; }
+  return "#3d3d4d";
+}
+
+blueprint keyboard(doDraw, px, py) {
+  brick w = W();
+  brick h = H();
+  brick kw = min(floor((w - 20) / 10) - 4, 44);
+  brick kh = 46;
+  brick top = h - 4 * (kh + 6) - 12;
+  brick rows = [chars("QWERTYUIOP"), chars("ASDFGHJKL"), chars("ZXCVBNM"), ["ENTER", "DEL"]];
+  brick r = 0;
+  stack (r < 4) {
+    brick row = rows[r];
+    brick n = len(row);
+    brick wide = 1;
+    if (r == 3) { wide = 2.2; }
+    brick kww = kw * wide;
+    brick sx = floor((w - (n * (kww + 4) - 4)) / 2);
+    brick c = 0;
+    stack (c < n) {
+      brick x = sx + c * (kww + 4);
+      brick y = top + r * (kh + 6);
+      brick lab = row[c];
+      if (doDraw) {
+        brick col = "#4a4a60";
+        if (r < 3) {
+          brick s = kstat[lidx(lab)];
+          if (s == 3) { col = "#2f9e44"; }
+          else if (s == 2) { col = "#d9a400"; }
+          else if (s == 1) { col = "#23232f"; }
+        }
+        rect(x, y, kww, kh, col);
+        text(lab, x + kww / 2, y + kh / 2, 15, "#ffffff");
+      } else {
+        if (px >= x && px <= x + kww && py >= y && py <= y + kh) { return lab; }
+      }
+      c = c + 1;
+    }
+    r = r + 1;
+  }
+  return "";
+}
+
+blueprint ondraw() {
+  brick w = W();
+  brick h = H();
+  brick ts = min(min(floor((w - 30) / N), floor(h * 0.085)), 62);
+  brick gap = 6;
+  brick x0 = floor((w - (N * (ts + gap) - gap)) / 2);
+  brick y0 = 80;
+
+  text("DISTRO WORDLE", w / 2, 30, 26, "#ffffff");
+  if (state == 1) { text("Tebrikler! Yarın yeni bir dağıtım var.", w / 2, 58, 15, "#69db7c"); }
+  else if (state == 2) { text("Cevap: " + answerName(), w / 2, 58, 16, "#ff8787"); }
+  else if (msgT > 0) { text(msg, w / 2, 58, 15, "#ffd43b"); }
+  else { text("Bugünün dağıtımı: " + N + " harf", w / 2, 58, 14, "#8b8ba3"); }
+
+  brick r = 0;
+  stack (r < MAXTRIES) {
+    brick c = 0;
+    stack (c < N) {
+      brick x = x0 + c * (ts + gap);
+      brick y = y0 + r * (ts + gap);
+      brick ch = "";
+      if (r < len(guesses)) {
+        ch = chars(guesses[r])[c];
+        rect(x, y, ts, ts, scol(results[r][c]));
+      } else {
+        if (r == len(guesses) && state == 0) {
+          brick cc = chars(normGuess(cur));
+          if (c < len(cc)) { ch = cc[c]; }
+        }
+        brick bc = "#3a3a4c";
+        if (ch != "") { bc = "#7a7a96"; }
+        rect(x, y, ts, ts, bc);
+        rect(x + 2, y + 2, ts - 4, ts - 4, "#14141f");
+      }
+      if (ch != "") { text(ch, x + ts / 2, y + ts / 2, floor(ts * 0.55), "#ffffff"); }
+      c = c + 1;
+    }
+    r = r + 1;
+  }
+  keyboard(true, 0, 0);
+}
+
+blueprint onframe(dt) {
+  brick k = nextKey();
+  stack (k != "") { press(k); k = nextKey(); }
+  if (msgT > 0) { msgT = msgT - dt; }
+}
+
+blueprint onclick(x, y) {
+  brick k = keyboard(false, x, y);
+  if (k != "") { press(k); }
+}
+
+// ---------- Kayıtlı tahminleri geri yükle (aynı gün) ----------
+brick saved = savedGuesses();
+brick si = 0;
+stack (si < len(saved)) { accept(saved[si]); si = si + 1; }
+</script>
+
+<!-- Köprü: dosyayı okuma, motoru kurma, klavye/tıklama -> BrickScript -->
+<script>
+(async function () {
+  const showErr = (t) => { const e = document.getElementById('err'); e.textContent = t; e.style.display = 'flex'; };
+
+  // 1) Dağıtım listesini dışarıdaki .txt'den oku (gömülü değil)
+  let names;
+  try {
+    const res = await fetch('linux_dagitimlari_1.txt', { cache: 'no-cache' });
+    if (!res.ok) throw new Error(res.status);
+    names = (await res.text()).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  } catch (e) {
+    showErr('linux_dagitimlari_1.txt okunamadı. Sayfayı dosya olarak değil bir yerel sunucudan aç ' +
+            '(örn. bu klasörde: python -m http.server) ve txt dosyasının aynı dizinde olduğundan emin ol.');
+    return;
+  }
+
+  // 2) İsim -> tahmin edilecek kısa ad ("Alpine Linux" -> ALPINE, "Red Hat Linux" -> REDHAT)
+  const GENERIC = /^((gnu[\/+])?linux(-libre)?|gnu|os|lx|system|desktop|live)$/i;
+  const letters = (s) => s.toUpperCase().replace(/[^A-Z]/g, '');
+  function baseOf(name) {
+    const par = name.match(/\(([^)]+)\)/);
+    const clean = name.replace(/\(.*?\)/g, '').trim();
+    let w = clean.split(/\s+/).filter(t => !GENERIC.test(t));
+    if (!w.length) w = clean.split(/\s+/);
+    let b = letters(w.join(''));
+    if (b.length > 12) b = par ? letters(par[1]) : letters(w[0]);
+    return b;
+  }
+  const fullToBase = new Map(), baseToName = new Map();
+  for (const n of names) {
+    const b = baseOf(n);
+    if (b.length < 3) continue;
+    fullToBase.set(letters(n), b);
+    if (!baseToName.has(b)) baseToName.set(b, n);
+  }
+  const bases = [...baseToName.keys()].sort();
+
+  // 3) Her gün yeni dağıtım (yerel gün numarasından, tüm cihazlarda aynı)
+  const d = new Date();
+  const dayNum = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+  const ans = bases[(dayNum * 7919 + 17) % bases.length];
+  const KEY = 'distro-wordle:' + dayNum;
+
+  // 4) Motor
+  const engine = Hardcore5.init({ canvas: 'game', fitMode: 'fullscreen', renderer: '2d', background: '#14141f' });
+
+  const queue = [];
+  addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Enter') queue.push('ENTER');
+    else if (e.key === 'Backspace') queue.push('DEL');
+    else if (/^[a-zA-Z]$/.test(e.key)) queue.push(e.key.toUpperCase());
+  });
+  engine.canvas.addEventListener('pointerdown', (e) => {
+    const r = engine.canvas.getBoundingClientRect();
+    engine.script.call('onclick', [(e.clientX - r.left) * engine.canvas.width / r.width,
+                                   (e.clientY - r.top) * engine.canvas.height / r.height]);
+  });
+
+  // 5) BrickScript'e açılan host fonksiyonları + oyun mantığını yükle
+  engine.script.load(document.getElementById('distro-wordle-bs').textContent, {
+    answer: () => ans,
+    answerName: () => baseToName.get(ans),
+    chars: (s) => [...s],
+    len: (x) => x.length,
+    push: (a, v) => { a.push(v); },
+    drop: (s) => s.slice(0, -1),
+    lidx: (c) => c.charCodeAt(0) - 65,
+    normGuess: (s) => { s = letters(s); return fullToBase.get(s) || s; },
+    isWord: (s) => baseToName.has(s),
+    nextKey: () => queue.shift() || '',
+    min: Math.min, floor: Math.floor,
+    W: () => engine.canvas.width,
+    H: () => engine.canvas.height,
+    rect: (x, y, w, h, c) => engine.renderer.drawRect(x, y, w, h, c),
+    text: (s, x, y, size, color) => {
+      const c = engine.ctx;
+      c.fillStyle = color; c.font = 'bold ' + size + 'px system-ui, sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(s, x, y);
+    },
+    savedGuesses: () => engine.storage.load(KEY, []),
+    saveGuesses: (a) => { engine.storage.save(KEY, a); }
+  });
+
+  engine.start({
+    update: (dt) => { engine.script.call('onframe', [dt]); },
+    draw: () => { engine.script.call('ondraw'); }
+  });
+})();
+</script>
+</body>
+</html>
