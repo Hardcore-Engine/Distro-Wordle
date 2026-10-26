@@ -1,0 +1,122 @@
+AlmaLinux
+Alpine Linux
+ALT Linux
+antiX
+Arch Linux
+ArchBang
+AUSTRUMI
+BackTrack
+BLAG
+Bodhi Linux
+BOSS Linux
+Canaima
+CentOS
+CentOS Stream
+Chakra
+Chimera Linux
+ChromeOS
+Clear Linux OS
+ClearOS
+CoreOS
+CrunchBang Linux
+CRUX
+Damn Small Linux
+Debian
+Deepin
+Devuan
+Dragora GNU/Linux-Libre
+dyne:bolic
+Edubuntu
+Elementary OS
+Emdebian Grip
+EndeavourOS
+Fedora Linux
+Finnix
+Freespire
+Funtoo
+Gentoo Linux
+gNewSense
+Grml
+Guix System
+Hyperbola GNU/Linux-libre
+IPFire
+Kali Linux
+Knoppix
+Korora
+Kubuntu
+LibreCMC
+Linspire
+Linux Lite
+Linux Mint
+Lubuntu
+Mageia
+Mandriva Linux
+Manjaro Linux
+MEPIS
+Miracle Linux
+Musix GNU+Linux
+MX Linux
+Nanolinux
+Netrunner
+NixOS
+Novell Open Enterprise Server
+OpenELEC
+openGEU
+OpenMandriva Lx
+openSUSE
+OpenWrt
+Oracle Linux
+Parabola GNU/Linux-libre
+Pardus
+Parrot OS
+Parsix
+Parted Magic
+PCLinuxOS
+Pentoo
+Pop! OS
+Porteus
+Puppy Linux
+Puredyne
+PureOS
+Qubes OS
+Red Flag Linux
+Red Hat Enterprise Linux (RHEL)
+Red Hat Linux
+Rocks Cluster Distribution
+Rocky Linux
+ROSA
+Rxart Desktop
+Sabayon Linux
+Salix OS
+Scientific Linux
+SHR
+Slackware
+Slax
+SliTaz GNU/Linux
+Solus
+SolydXK
+Source Mage GNU/Linux
+SparkyLinux
+SteamOS
+SUSE Linux Enterprise
+SystemRescueCD
+Tails
+Tiny Core Linux
+Tiny SliTaz
+Trisquel GNU/Linux
+TurnKey GNU/Linux
+Ubuntu
+Ubuntu MATE
+Univention Corporate Server
+Ututo
+VectorLinux
+Void Linux
+Webconverger
+Xandros
+XBMC Live
+XBMCbuntu
+Xubuntu
+Yellow Dog Linux
+Zentyal
+Zenwalk
+Zorin OS
